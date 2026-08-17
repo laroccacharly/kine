@@ -10,6 +10,12 @@ IPOPT_OPTIONS = {
     "verbose": False,
 }
 
+RETRYABLE_REASONS = {
+    "Diverging_Iterates",
+    "Infeasible_Problem_Detected",
+    "Restoration_Failure",
+}
+
 
 class SolverResults(BaseModel):
     success: bool

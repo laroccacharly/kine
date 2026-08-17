@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from kine.motion import JointMotion, JointMotionConfig
-from kine.render import RenderConfig, render_arm
+from kine.render import PixelPoint, RenderConfig, render_arm, world_point_from_frame_pixel
 from kine.solve import SolverResults
 from kine.types import JointAngles, TipPosition, TwoJointArm
 from kine.ui import UI
@@ -38,6 +38,13 @@ def create_app(ui: UI | None = None) -> FastAPI:
     if ui is not None and ui.assets_exist():
         app.mount("/", StaticFiles(directory=str(ui.dist_dir), html=True), name="ui")
     return app
+
+
+class TargetCommand(BaseModel):
+    x: float | None = None
+    y: float | None = None
+    x_px: float | None = None
+    y_px: float | None = None
 
 
 class BrowserIceCandidate(BaseModel):
@@ -64,19 +71,35 @@ class ArmVideoTrack(VideoStreamTrack):
         super().__init__()
         self.arm = arm
         self.config = config
-        self.target = TipPosition(x=2.0, y=0.0)
         self.time_s: float | None = None
-        result = arm.joint_angles(self.target)
+        result = arm.set_target(arm.target)
         if result.success and result.solution is not None:
             self.arm.angles = JointAngles(theta1=result.solution[0], theta2=result.solution[1])
         self.motion = JointMotion.at_rest(self.arm.angles, motion_config)
 
     def set_target(self, target: TipPosition) -> SolverResults:
-        self.target = target
-        result = self.arm.joint_angles(target)
+        result = self.arm.set_target(target)
         if result.success and result.solution is not None:
             self.motion.set_goal(JointAngles(theta1=result.solution[0], theta2=result.solution[1]))
         return result
+
+    def set_target_from_command(self, command: TargetCommand) -> SolverResults | None:
+        target = self.tip_from_command(command)
+        if target is None:
+            return None
+        return self.set_target(target)
+
+    def tip_from_command(self, command: TargetCommand) -> TipPosition | None:
+        if command.x_px is not None and command.y_px is not None:
+            world = world_point_from_frame_pixel(
+                PixelPoint(x_px=command.x_px, y_px=command.y_px),
+                self.arm,
+                self.config,
+            )
+            return TipPosition(x=world.x_m, y=world.y_m)
+        if command.x is None or command.y is None:
+            return None
+        return TipPosition(x=command.x, y=command.y)
 
     async def recv(self) -> VideoFrame:
         pts, time_base = await self.next_timestamp()
@@ -85,7 +108,7 @@ class ArmVideoTrack(VideoStreamTrack):
         self.time_s = now_s
         self.arm.angles = self.motion.step(dt_s)
         frame = VideoFrame.from_ndarray(
-            np.asarray(render_arm(self.arm, self.target, self.config)), format="rgb24"
+            np.asarray(render_arm(self.arm, self.config)), format="rgb24"
         )
         frame.pts = pts
         frame.time_base = time_base
@@ -112,8 +135,16 @@ def register_routes(app: FastAPI) -> None:
                     )
                     continue
                 if kind == "target":
-                    result = track.set_target(TipPosition(x=message["x"], y=message["y"]))
-                    await websocket.send_json({"type": "solver", **result.model_dump()})
+                    result = track.set_target_from_command(TargetCommand.model_validate(message))
+                    if result is None:
+                        continue
+                    await websocket.send_json(
+                        {
+                            "type": "solver",
+                            **result.model_dump(),
+                            "target": track.arm.target.model_dump(),
+                        }
+                    )
                     continue
                 if kind != "ice":
                     continue

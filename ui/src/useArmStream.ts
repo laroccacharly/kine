@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { SolverResults } from './types'
+import type { SolverResults, TargetCommand } from './types'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const SIGNALING_URL = `${protocol}//${window.location.host}/ws`
@@ -42,6 +42,7 @@ export function useArmStream() {
           solution: message.solution,
           reason: message.reason,
           runtime: message.runtime,
+          target: message.target ?? null,
         })
         return
       }
@@ -66,12 +67,12 @@ export function useArmStream() {
     }
   }, [])
 
-  function sendTarget(x: number, y: number) {
+  function sendTarget(target: TargetCommand) {
     const ws = socketRef.current
     if (ws == null || ws.readyState !== WebSocket.OPEN) {
       return
     }
-    ws.send(JSON.stringify({ type: 'target', x, y }))
+    ws.send(JSON.stringify({ type: 'target', ...target }))
   }
 
   return { stream, solver, sendTarget }

@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
+import type { TargetCommand } from './types'
+
 const DEFAULT_X = 2
 const DEFAULT_Y = 0
 
 type TargetFormProps = {
-  onSubmit: (x: number, y: number) => void
+  onSubmit: (target: TargetCommand) => void
 }
 
 export function TargetForm({ onSubmit }: TargetFormProps) {
@@ -28,7 +30,7 @@ export function TargetForm({ onSubmit }: TargetFormProps) {
         if (!Number.isFinite(parsedX) || !Number.isFinite(parsedY)) {
           return
         }
-        onSubmit(parsedX, parsedY)
+        onSubmit({ x: parsedX, y: parsedY })
       }}
     >
       <Field orientation="horizontal" className="w-auto">

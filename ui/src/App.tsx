@@ -38,7 +38,7 @@ export default function App() {
             </CardAction>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 p-0">
-            <ArmVideo stream={stream} />
+            <ArmVideo stream={stream} onTarget={sendTarget} />
           </CardContent>
           <CardFooter className="justify-start">
             <SolverStatus result={solver} />

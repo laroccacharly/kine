@@ -31,6 +31,14 @@ export function SolverStatus({ result }: SolverStatusProps) {
         <dd>{(result.runtime * 1000).toFixed(1)} ms</dd>
       </div>
       <div className="flex min-w-0 items-center gap-2">
+        <dt className="text-muted-foreground">target</dt>
+        <dd className="truncate">
+          {result.target == null
+            ? 'none'
+            : `${result.target.x.toFixed(2)} m, ${result.target.y.toFixed(2)} m`}
+        </dd>
+      </div>
+      <div className="flex min-w-0 items-center gap-2">
         <dt className="text-muted-foreground">solution</dt>
         <dd className="truncate">
           {result.solution == null

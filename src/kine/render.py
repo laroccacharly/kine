@@ -1,9 +1,9 @@
 from math import cos, sin
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel
 
-from kine.types import TipPosition, TwoJointArm
+from kine.types import TwoJointArm
 
 
 class RenderConfig(BaseModel):
@@ -13,10 +13,12 @@ class RenderConfig(BaseModel):
     padding_px: int = 16
     link_width_px: int = 8
     target_outline_width_px: int = 2
+    label_font_size_px: int = 18
     background_rgb: tuple[int, int, int] = (18, 18, 22)
     target_rgb: tuple[int, int, int] = (120, 180, 255)
     link_rgb: tuple[int, int, int] = (220, 220, 230)
     joint_rgb: tuple[int, int, int] = (200, 80, 80)
+    label_rgb: tuple[int, int, int] = (210, 210, 220)
 
 
 class WorldPoint(BaseModel):
@@ -50,11 +52,36 @@ def arm_pixels_per_meter(arm: TwoJointArm, config: RenderConfig) -> float:
     return usable_radius_px / reach_m
 
 
+def frame_origin_px(config: RenderConfig) -> PixelPoint:
+    return PixelPoint(x_px=config.frame_width_px / 2, y_px=config.frame_height_px / 2)
+
+
 def meters_to_pixels(point: WorldPoint, origin: PixelPoint, px_per_m: float) -> PixelPoint:
     return PixelPoint(
         x_px=origin.x_px + point.x_m * px_per_m,
         y_px=origin.y_px - point.y_m * px_per_m,
     )
+
+
+def pixels_to_meters(point: PixelPoint, origin: PixelPoint, px_per_m: float) -> WorldPoint:
+    if px_per_m <= 0:
+        raise ValueError("pixels per meter must be positive")
+    return WorldPoint(
+        x_m=(point.x_px - origin.x_px) / px_per_m,
+        y_m=(origin.y_px - point.y_px) / px_per_m,
+    )
+
+
+def world_point_from_frame_pixel(
+    pixel: PixelPoint,
+    arm: TwoJointArm,
+    config: RenderConfig,
+) -> WorldPoint:
+    return pixels_to_meters(pixel, frame_origin_px(config), arm_pixels_per_meter(arm, config))
+
+
+def format_world_point(point: WorldPoint) -> str:
+    return f"{point.x_m:.2f} m, {point.y_m:.2f} m"
 
 
 def circle_bbox(center: PixelPoint, radius_px: float) -> tuple[float, float, float, float]:
@@ -66,21 +93,15 @@ def circle_bbox(center: PixelPoint, radius_px: float) -> tuple[float, float, flo
     )
 
 
-def render_arm(arm: TwoJointArm, target: TipPosition, config: RenderConfig) -> Image.Image:
+def render_arm(arm: TwoJointArm, config: RenderConfig) -> Image.Image:
     image = Image.new("RGB", (config.frame_width_px, config.frame_height_px), config.background_rgb)
     draw = ImageDraw.Draw(image)
-    origin_px = PixelPoint(x_px=config.frame_width_px / 2, y_px=config.frame_height_px / 2)
+    origin_px = frame_origin_px(config)
     px_per_m = arm_pixels_per_meter(arm, config)
-
-    joints_px = [
-        meters_to_pixels(point_m, origin_px, px_per_m)
-        for point_m in joint_positions_m(arm)
-    ]
-    target_px = meters_to_pixels(
-        WorldPoint(x_m=target.x, y_m=target.y),
-        origin_px,
-        px_per_m,
-    )
+    joints_m = joint_positions_m(arm)
+    joints_px = [meters_to_pixels(point_m, origin_px, px_per_m) for point_m in joints_m]
+    target_m = WorldPoint(x_m=arm.target.x, y_m=arm.target.y)
+    target_px = meters_to_pixels(target_m, origin_px, px_per_m)
 
     draw.ellipse(
         circle_bbox(target_px, config.radius_px),
@@ -94,4 +115,18 @@ def render_arm(arm: TwoJointArm, target: TipPosition, config: RenderConfig) -> I
     )
     for joint_px in joints_px:
         draw.ellipse(circle_bbox(joint_px, config.radius_px), fill=config.joint_rgb)
+
+    font = ImageFont.load_default(size=config.label_font_size_px)
+    draw.text(
+        (config.padding_px, config.padding_px),
+        f"current {format_world_point(joints_m[-1])}",
+        fill=config.label_rgb,
+        font=font,
+    )
+    draw.text(
+        (config.padding_px, config.padding_px + config.label_font_size_px + 4),
+        f"target  {format_world_point(target_m)}",
+        fill=config.target_rgb,
+        font=font,
+    )
     return image

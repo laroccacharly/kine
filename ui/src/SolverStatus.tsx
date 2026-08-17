@@ -1,3 +1,6 @@
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+
 import type { SolverResults } from './types'
 
 type SolverStatusProps = {
@@ -6,26 +9,30 @@ type SolverStatusProps = {
 
 export function SolverStatus({ result }: SolverStatusProps) {
   if (result == null) {
-    return null
+    return <p className="text-sm text-muted-foreground">No solver result yet.</p>
   }
 
   return (
-    <dl className={result.success ? 'solver ok' : 'solver fail'}>
-      <div>
-        <dt>success</dt>
-        <dd>{String(result.success)}</dd>
+    <dl className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm tabular-nums">
+      <div className="flex items-center gap-2">
+        <dt className="text-muted-foreground">status</dt>
+        <dd>
+          <Badge variant={result.success ? 'secondary' : 'destructive'}>
+            {result.success ? 'ok' : 'fail'}
+          </Badge>
+        </dd>
       </div>
-      <div>
-        <dt>reason</dt>
-        <dd>{result.reason}</dd>
+      <div className="flex items-center gap-2">
+        <dt className="text-muted-foreground">reason</dt>
+        <dd className={cn(!result.success && 'text-destructive')}>{result.reason}</dd>
       </div>
-      <div>
-        <dt>runtime</dt>
+      <div className="flex items-center gap-2">
+        <dt className="text-muted-foreground">runtime</dt>
         <dd>{(result.runtime * 1000).toFixed(1)} ms</dd>
       </div>
-      <div>
-        <dt>solution</dt>
-        <dd>
+      <div className="flex min-w-0 items-center gap-2">
+        <dt className="text-muted-foreground">solution</dt>
+        <dd className="truncate">
           {result.solution == null
             ? 'none'
             : result.solution.map((value) => value.toFixed(4)).join(', ')}

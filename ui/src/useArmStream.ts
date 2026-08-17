@@ -5,23 +5,21 @@ import type { SolverResults } from './types'
 const SIGNALING_URL = 'ws://127.0.0.1:8000/ws'
 
 export function useArmStream() {
-  const videoRef = useRef<HTMLVideoElement>(null)
   const socketRef = useRef<WebSocket | null>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
   const [solver, setSolver] = useState<SolverResults | null>(null)
 
   useEffect(() => {
-    const video = videoRef.current
-    if (video == null) {
-      return
-    }
-
     let cancelled = false
     const pc = new RTCPeerConnection()
     const ws = new WebSocket(SIGNALING_URL)
     socketRef.current = ws
     pc.addTransceiver('video', { direction: 'recvonly' })
     pc.ontrack = (event) => {
-      video.srcObject = event.streams[0] ?? new MediaStream([event.track])
+      if (cancelled) {
+        return
+      }
+      setStream(event.streams[0] ?? new MediaStream([event.track]))
     }
     pc.onicecandidate = (event) => {
       if (event.candidate == null || ws.readyState !== WebSocket.OPEN) {
@@ -61,6 +59,7 @@ export function useArmStream() {
     return () => {
       cancelled = true
       socketRef.current = null
+      setStream(null)
       ws.close()
       void pc.close()
     }
@@ -74,5 +73,5 @@ export function useArmStream() {
     ws.send(JSON.stringify({ type: 'target', x, y }))
   }
 
-  return { videoRef, solver, sendTarget }
+  return { stream, solver, sendTarget }
 }

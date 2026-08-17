@@ -25,5 +25,7 @@ def test_joint_angles_for_tip_position(
     valid_solutions: list[JointAngles],
 ) -> None:
     arm = TwoJointArm(l1=1.0, l2=1.0)
-    solutions = arm.joint_angles(position)
-    assert any(solution in valid_solutions for solution in solutions)
+    result = arm.joint_angles(position)
+    assert result.success
+    assert result.solution is not None
+    assert JointAngles(theta1=result.solution[0], theta2=result.solution[1]) in valid_solutions

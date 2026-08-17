@@ -19,5 +19,7 @@ def test_tip_position_for_two_joint_angles(
     expected: TipPosition,
 ) -> None:
     arm = TwoJointArm(l1=1.0, l2=1.0)
-    position = arm.tip_position(angles)
-    assert position == expected
+    result = arm.tip_position(angles)
+    assert result.success
+    assert result.solution is not None
+    assert TipPosition(x=result.solution[0], y=result.solution[1]) == expected

@@ -3,7 +3,7 @@ from math import atan2, isclose, remainder, tau
 from pydantic import BaseModel
 
 from kine.build_nlp import build_forward_nlp, build_inverse_nlp
-from kine.solve import solve_with_ipopt
+from kine.solve import SolverResults, solve_with_ipopt
 
 
 def equivalent_angle(left: float, right: float) -> bool:
@@ -38,13 +38,11 @@ class TwoJointArm(BaseModel):
     l1: float
     l2: float
 
-    def tip_position(self, angles: JointAngles) -> TipPosition:
+    def tip_position(self, angles: JointAngles) -> SolverResults:
         nlp = build_forward_nlp(self.l1, self.l2, angles.theta1, angles.theta2)
-        solved_x, solved_y = solve_with_ipopt(nlp, x0=[0.0, 0.0])
-        return TipPosition(x=solved_x, y=solved_y)
+        return solve_with_ipopt(nlp, x0=[0.0, 0.0])
 
-    def joint_angles(self, position: TipPosition) -> list[JointAngles]:
+    def joint_angles(self, position: TipPosition) -> SolverResults:
         nlp = build_inverse_nlp(self.l1, self.l2, position.x, position.y)
         guess = [atan2(position.y, position.x), 0.0]
-        solved_theta1, solved_theta2 = solve_with_ipopt(nlp, x0=guess)
-        return [JointAngles(theta1=solved_theta1, theta2=solved_theta2)]
+        return solve_with_ipopt(nlp, x0=guess)

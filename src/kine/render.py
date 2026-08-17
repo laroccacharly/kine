@@ -3,7 +3,7 @@ from math import cos, sin
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel
 
-from kine.types import TwoJointArm
+from kine.arm import TwoJointArm
 
 
 class RenderConfig(BaseModel):

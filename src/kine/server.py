@@ -13,10 +13,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from kine.arm import TwoJointArm
 from kine.motion import JointMotion, JointMotionConfig
 from kine.render import PixelPoint, RenderConfig, render_arm, world_point_from_frame_pixel
 from kine.solve import SolverResults
-from kine.types import JointAngles, TipPosition, TwoJointArm
+from kine.types import JointAngles, TipPosition
 from kine.ui import UI
 
 

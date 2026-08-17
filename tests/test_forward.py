@@ -20,5 +20,4 @@ def test_tip_position_for_two_joint_angles(
 ) -> None:
     arm = TwoJointArm(l1=1.0, l2=1.0)
     position = arm.tip_position(angles)
-    assert position.x == pytest.approx(expected.x)
-    assert position.y == pytest.approx(expected.y)
+    assert position == expected

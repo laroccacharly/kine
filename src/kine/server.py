@@ -1,5 +1,11 @@
 import numpy as np
-from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
+from aiortc import (
+    RTCConfiguration,
+    RTCIceCandidate,
+    RTCPeerConnection,
+    RTCSessionDescription,
+    VideoStreamTrack,
+)
 from aiortc.sdp import candidate_from_sdp
 from av import VideoFrame
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -11,6 +17,11 @@ from kine.render import RenderConfig, render_arm
 from kine.solve import SolverResults
 from kine.types import JointAngles, TipPosition, TwoJointArm
 from kine.ui import UI
+
+
+def create_local_peer_connection() -> RTCPeerConnection:
+    """Create a peer connection that only advertises local network routes."""
+    return RTCPeerConnection(RTCConfiguration(iceServers=[]))
 
 
 def create_app(ui: UI | None = None) -> FastAPI:
@@ -73,7 +84,7 @@ def register_routes(app: FastAPI) -> None:
     @app.websocket("/ws")
     async def stream_arm(websocket: WebSocket) -> None:
         await websocket.accept()
-        pc = RTCPeerConnection()
+        pc = create_local_peer_connection()
         arm = TwoJointArm(l1=1.0, l2=1.0)
         track = ArmVideoTrack(arm, RenderConfig())
         pc.addTrack(track)

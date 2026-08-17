@@ -5,11 +5,10 @@ import threading
 import time
 
 import uvicorn
-from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
-from aiortc.sdp import candidate_to_sdp
+from aiortc import RTCSessionDescription
 from websockets.asyncio.client import connect
 
-from kine.server import create_app
+from kine.server import create_app, create_local_peer_connection
 
 FIRST_FRAME_TIMEOUT_S = 30
 
@@ -18,14 +17,6 @@ def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
-
-
-def ice_payload(candidate: RTCIceCandidate) -> dict:
-    return {
-        "candidate": f"candidate:{candidate_to_sdp(candidate)}",
-        "sdpMid": candidate.sdpMid,
-        "sdpMLineIndex": candidate.sdpMLineIndex,
-    }
 
 
 class ServerThread:
@@ -58,7 +49,7 @@ class ServerThread:
 
 
 async def receive_first_frame(ws_url: str):
-    pc = RTCPeerConnection()
+    pc = create_local_peer_connection()
     pc.addTransceiver("video", direction="recvonly")
     first_frame: asyncio.Future = asyncio.get_running_loop().create_future()
 
@@ -73,15 +64,6 @@ async def receive_first_frame(ws_url: str):
 
     try:
         async with connect(ws_url) as websocket:
-
-            @pc.on("icecandidate")
-            def on_icecandidate(candidate: RTCIceCandidate | None) -> None:
-                if candidate is None:
-                    return
-                asyncio.create_task(
-                    websocket.send(json.dumps({"type": "ice", "candidate": ice_payload(candidate)}))
-                )
-
             message = json.loads(await websocket.recv())
             if message["type"] != "offer":
                 raise AssertionError(f"expected offer, got {message['type']}")

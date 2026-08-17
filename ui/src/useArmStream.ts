@@ -1,0 +1,78 @@
+import { useEffect, useRef, useState } from 'react'
+
+import type { SolverResults } from './types'
+
+const SIGNALING_URL = 'ws://127.0.0.1:8000/ws'
+
+export function useArmStream() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const socketRef = useRef<WebSocket | null>(null)
+  const [solver, setSolver] = useState<SolverResults | null>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (video == null) {
+      return
+    }
+
+    let cancelled = false
+    const pc = new RTCPeerConnection()
+    const ws = new WebSocket(SIGNALING_URL)
+    socketRef.current = ws
+    pc.addTransceiver('video', { direction: 'recvonly' })
+    pc.ontrack = (event) => {
+      video.srcObject = event.streams[0] ?? new MediaStream([event.track])
+    }
+    pc.onicecandidate = (event) => {
+      if (event.candidate == null || ws.readyState !== WebSocket.OPEN) {
+        return
+      }
+      ws.send(JSON.stringify({ type: 'ice', candidate: event.candidate }))
+    }
+
+    ws.onmessage = async (event) => {
+      const message = JSON.parse(event.data) as { type: string } & SolverResults & {
+        sdp: string
+      }
+      if (cancelled) {
+        return
+      }
+      if (message.type === 'solver') {
+        setSolver({
+          success: message.success,
+          solution: message.solution,
+          reason: message.reason,
+          runtime: message.runtime,
+        })
+        return
+      }
+      if (message.type !== 'offer') {
+        return
+      }
+      await pc.setRemoteDescription({ type: 'offer', sdp: message.sdp })
+      const answer = await pc.createAnswer()
+      await pc.setLocalDescription(answer)
+      if (cancelled || ws.readyState !== WebSocket.OPEN) {
+        return
+      }
+      ws.send(JSON.stringify({ type: 'answer', sdp: pc.localDescription?.sdp }))
+    }
+
+    return () => {
+      cancelled = true
+      socketRef.current = null
+      ws.close()
+      void pc.close()
+    }
+  }, [])
+
+  function sendTarget(x: number, y: number) {
+    const ws = socketRef.current
+    if (ws == null || ws.readyState !== WebSocket.OPEN) {
+      return
+    }
+    ws.send(JSON.stringify({ type: 'target', x, y }))
+  }
+
+  return { videoRef, solver, sendTarget }
+}

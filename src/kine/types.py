@@ -37,6 +37,7 @@ class TipPosition(BaseModel):
 class TwoJointArm(BaseModel):
     l1: float
     l2: float
+    angles: JointAngles = JointAngles(theta1=0.0, theta2=0.0)
 
     def tip_position(self, angles: JointAngles) -> SolverResults:
         nlp = build_forward_nlp(self.l1, self.l2, angles.theta1, angles.theta2)

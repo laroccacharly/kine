@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { SolverResults } from './types'
 
-const SIGNALING_URL = 'ws://127.0.0.1:8000/ws'
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+const SIGNALING_URL = `${protocol}//${window.location.host}/ws`
 
 export function useArmStream() {
   const socketRef = useRef<WebSocket | null>(null)

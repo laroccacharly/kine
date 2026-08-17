@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from kine.motion import JointMotion, JointMotionConfig
 from kine.render import RenderConfig, render_arm
 from kine.solve import SolverResults
 from kine.types import JointAngles, TipPosition, TwoJointArm
@@ -54,24 +55,35 @@ def ice_candidate_from_browser(data: BrowserIceCandidate) -> RTCIceCandidate:
 
 
 class ArmVideoTrack(VideoStreamTrack):
-    def __init__(self, arm: TwoJointArm, config: RenderConfig) -> None:
+    def __init__(
+        self,
+        arm: TwoJointArm,
+        config: RenderConfig,
+        motion_config: JointMotionConfig,
+    ) -> None:
         super().__init__()
         self.arm = arm
         self.config = config
         self.target = TipPosition(x=2.0, y=0.0)
+        self.time_s: float | None = None
         result = arm.joint_angles(self.target)
         if result.success and result.solution is not None:
             self.arm.angles = JointAngles(theta1=result.solution[0], theta2=result.solution[1])
+        self.motion = JointMotion.at_rest(self.arm.angles, motion_config)
 
     def set_target(self, target: TipPosition) -> SolverResults:
         self.target = target
         result = self.arm.joint_angles(target)
         if result.success and result.solution is not None:
-            self.arm.angles = JointAngles(theta1=result.solution[0], theta2=result.solution[1])
+            self.motion.set_goal(JointAngles(theta1=result.solution[0], theta2=result.solution[1]))
         return result
 
     async def recv(self) -> VideoFrame:
         pts, time_base = await self.next_timestamp()
+        now_s = float(pts * time_base)
+        dt_s = 0.0 if self.time_s is None else now_s - self.time_s
+        self.time_s = now_s
+        self.arm.angles = self.motion.step(dt_s)
         frame = VideoFrame.from_ndarray(
             np.asarray(render_arm(self.arm, self.target, self.config)), format="rgb24"
         )
@@ -86,7 +98,7 @@ def register_routes(app: FastAPI) -> None:
         await websocket.accept()
         pc = create_local_peer_connection()
         arm = TwoJointArm(l1=1.0, l2=1.0)
-        track = ArmVideoTrack(arm, RenderConfig())
+        track = ArmVideoTrack(arm, RenderConfig(), JointMotionConfig())
         pc.addTrack(track)
         try:
             await pc.setLocalDescription(await pc.createOffer())

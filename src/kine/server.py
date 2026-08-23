@@ -2,6 +2,7 @@ import numpy as np
 from aiortc import (
     RTCConfiguration,
     RTCIceCandidate,
+    RTCIceServer,
     RTCPeerConnection,
     RTCSessionDescription,
     VideoStreamTrack,
@@ -22,8 +23,13 @@ from kine.ui import UI
 
 
 def create_local_peer_connection() -> RTCPeerConnection:
-    """Create a peer connection that only advertises local network routes."""
-    return RTCPeerConnection(RTCConfiguration(iceServers=[]))
+    return RTCPeerConnection(
+        RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
+    )
+
+
+def create_ui_app() -> FastAPI:
+    return create_app(UI())
 
 
 def create_app(ui: UI | None = None) -> FastAPI:

@@ -12,7 +12,9 @@ export function useArmStream() {
 
   useEffect(() => {
     let cancelled = false
-    const pc = new RTCPeerConnection()
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    })
     const ws = new WebSocket(SIGNALING_URL)
     socketRef.current = ws
     pc.addTransceiver('video', { direction: 'recvonly' })

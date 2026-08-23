@@ -137,3 +137,23 @@ body,
     @apply font-sans;
   }
 }
+
+@layer components {
+  .player-stage {
+    display: flex;
+    flex: 1 1 0%;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    container-type: size;
+  }
+
+  .player-frame {
+    aspect-ratio: 4 / 3;
+    width: min(100cqw, calc(100cqh * 4 / 3));
+    height: auto;
+    max-height: 100%;
+    overflow: hidden;
+  }
+}

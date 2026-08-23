@@ -18,17 +18,17 @@ export default function App() {
   const { stream, solver, sendTarget } = useArmStream()
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-3">
+    <div className="flex h-svh flex-col overflow-hidden">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b px-5 py-3">
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-lg font-medium tracking-tight">Kine</h1>
           <p className="text-sm text-muted-foreground">Inverse kinematics camera feed</p>
         </div>
         <TargetForm onSubmit={sendTarget} />
       </header>
-      <main className="flex min-h-0 flex-1 flex-col p-4">
+      <main className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
         <Card className="min-h-0 flex-1 gap-0 py-0">
-          <CardHeader className="border-b py-3">
+          <CardHeader className="shrink-0 border-b py-3">
             <CardTitle>Arm feed</CardTitle>
             <CardDescription>Live WebRTC stream from the solver</CardDescription>
             <CardAction>
@@ -37,10 +37,10 @@ export default function App() {
               </Badge>
             </CardAction>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 p-0">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
             <ArmVideo stream={stream} onTarget={sendTarget} />
           </CardContent>
-          <CardFooter className="justify-start">
+          <CardFooter className="shrink-0 justify-start">
             <SolverStatus result={solver} />
           </CardFooter>
         </Card>

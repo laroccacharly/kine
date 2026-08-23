@@ -1,6 +1,6 @@
 import pytest
 
-from kine.two_joint import JointAngles, TipPosition, TwoJointArm
+from kine.two_joint import JointAngles, TipPosition, TwoJointArm, solve_forward, solve_inverse
 
 
 @pytest.mark.parametrize(
@@ -14,11 +14,11 @@ from kine.two_joint import JointAngles, TipPosition, TwoJointArm
 )
 def test_set_target_reaches_tip_position(position: TipPosition) -> None:
     arm = TwoJointArm(l1=1.0, l2=1.0)
-    result = arm.set_target(position)
+    result = solve_inverse(arm, position)
     assert result.success
     assert result.solution is not None
-    reached = arm.tip_position(
-        JointAngles(theta1=result.solution[0], theta2=result.solution[1])
+    reached = solve_forward(
+        arm, JointAngles(theta1=result.solution[0], theta2=result.solution[1])
     )
     assert reached.success
     assert reached.solution is not None

@@ -4,6 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel
 
 from kine.arm import TwoJointArm
+from kine.types import TipPosition
 
 
 class RenderConfig(BaseModel):
@@ -93,14 +94,14 @@ def circle_bbox(center: PixelPoint, radius_px: float) -> tuple[float, float, flo
     )
 
 
-def render_arm(arm: TwoJointArm, config: RenderConfig) -> Image.Image:
+def render_arm(arm: TwoJointArm, target: TipPosition, config: RenderConfig) -> Image.Image:
     image = Image.new("RGB", (config.frame_width_px, config.frame_height_px), config.background_rgb)
     draw = ImageDraw.Draw(image)
     origin_px = frame_origin_px(config)
     px_per_m = arm_pixels_per_meter(arm, config)
     joints_m = joint_positions_m(arm)
     joints_px = [meters_to_pixels(point_m, origin_px, px_per_m) for point_m in joints_m]
-    target_m = WorldPoint(x_m=arm.target.x, y_m=arm.target.y)
+    target_m = WorldPoint(x_m=target.x, y_m=target.y)
     target_px = meters_to_pixels(target_m, origin_px, px_per_m)
 
     draw.ellipse(

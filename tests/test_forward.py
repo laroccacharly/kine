@@ -2,7 +2,7 @@ from math import pi
 
 import pytest
 
-from kine.two_joint import JointAngles, TipPosition, TwoJointArm
+from kine.two_joint import JointAngles, TipPosition, TwoJointArm, solve_forward
 
 
 @pytest.mark.parametrize(
@@ -19,7 +19,7 @@ def test_tip_position_for_two_joint_angles(
     expected: TipPosition,
 ) -> None:
     arm = TwoJointArm(l1=1.0, l2=1.0)
-    result = arm.tip_position(angles)
+    result = solve_forward(arm, angles)
     assert result.success
     assert result.solution is not None
     assert TipPosition(x=result.solution[0], y=result.solution[1]) == expected

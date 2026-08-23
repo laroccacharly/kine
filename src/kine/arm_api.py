@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 
 from kine.motion import JointMotionConfig
@@ -6,6 +8,8 @@ from kine.render import PixelPoint, world_point_from_frame_pixel
 from kine.session import ArmSession
 from kine.solve import SolverResults
 from kine.types import TipPosition
+
+router = APIRouter(prefix="/api/arm", tags=["arm"])
 
 
 class WorldTargetCommand(BaseModel):
@@ -35,6 +39,13 @@ class TargetUpdateResponse(BaseModel):
     solver: SolverResults
 
 
+def get_arm_session(request: Request) -> ArmSession:
+    return request.app.state.arm_session
+
+
+SessionDependency = Annotated[ArmSession, Depends(get_arm_session)]
+
+
 def arm_state(session: ArmSession) -> ArmState:
     return ArmState(target=session.target, motion=session.motion_config)
 
@@ -50,17 +61,22 @@ def target_from_command(command: TargetCommand, session: ArmSession) -> TipPosit
     return TipPosition(x=world.x_m, y=world.y_m)
 
 
-def register_arm_routes(app: FastAPI, session: ArmSession) -> None:
-    @app.get("/api/arm")
-    async def get_arm() -> ArmState:
-        return arm_state(session)
+@router.get("")
+async def get_arm(session: SessionDependency) -> ArmState:
+    return arm_state(session)
 
-    @app.put("/api/arm/target")
-    async def set_target(command: TargetCommand) -> TargetUpdateResponse:
-        result = session.set_target(target_from_command(command, session))
-        return TargetUpdateResponse(state=arm_state(session), solver=result)
 
-    @app.put("/api/arm/motion-config")
-    async def set_motion_config(config: JointMotionConfig) -> ArmState:
-        session.set_motion_config(config)
-        return arm_state(session)
+@router.put("/target")
+async def set_target(
+    command: TargetCommand, session: SessionDependency
+) -> TargetUpdateResponse:
+    result = session.set_target(target_from_command(command, session))
+    return TargetUpdateResponse(state=arm_state(session), solver=result)
+
+
+@router.put("/motion-config")
+async def set_motion_config(
+    config: JointMotionConfig, session: SessionDependency
+) -> ArmState:
+    session.set_motion_config(config)
+    return arm_state(session)

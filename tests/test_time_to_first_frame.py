@@ -8,7 +8,8 @@ import uvicorn
 from aiortc import RTCSessionDescription
 from websockets.asyncio.client import connect
 
-from kine.server import create_app, create_local_peer_connection
+from kine.server import create_app
+from kine.signaling import create_local_peer_connection
 
 FIRST_FRAME_TIMEOUT_S = 30
 

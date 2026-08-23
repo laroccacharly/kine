@@ -3,27 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from kine.arm import TwoJointArm
+from kine.arm_api import router as arm_router
 from kine.motion import JointMotionConfig
 from kine.render import RenderConfig
-from kine.server_api import (
-    ArmState,
-    PixelTargetCommand,
-    TargetCommand,
-    TargetUpdateResponse,
-    WorldTargetCommand,
-    arm_state,
-    register_arm_routes,
-    target_from_command,
-)
 from kine.session import ArmSession
+from kine.signaling import router as signaling_router
 from kine.ui import UI
-from kine.webrtc import (
-    ArmVideoTrack,
-    BrowserIceCandidate,
-    create_local_peer_connection,
-    ice_candidate_from_browser,
-    register_signaling_route,
-)
 
 
 def create_ui_app() -> FastAPI:
@@ -41,7 +26,8 @@ def create_app(ui: UI | None = None, session: ArmSession | None = None) -> FastA
     )
     session = session or create_default_session()
     app.state.arm_session = session
-    register_routes(app, session)
+    app.include_router(arm_router)
+    app.include_router(signaling_router)
     if ui is not None and ui.assets_exist():
         app.mount("/", StaticFiles(directory=str(ui.dist_dir), html=True), name="ui")
     return app
@@ -49,27 +35,3 @@ def create_app(ui: UI | None = None, session: ArmSession | None = None) -> FastA
 
 def create_default_session() -> ArmSession:
     return ArmSession(TwoJointArm(l1=1.0, l2=1.0), JointMotionConfig(), RenderConfig())
-
-
-def register_routes(app: FastAPI, session: ArmSession) -> None:
-    register_arm_routes(app, session)
-    register_signaling_route(app, session)
-
-
-__all__ = [
-    "ArmState",
-    "ArmVideoTrack",
-    "BrowserIceCandidate",
-    "PixelTargetCommand",
-    "TargetCommand",
-    "TargetUpdateResponse",
-    "WorldTargetCommand",
-    "arm_state",
-    "create_app",
-    "create_default_session",
-    "create_local_peer_connection",
-    "create_ui_app",
-    "ice_candidate_from_browser",
-    "register_routes",
-    "target_from_command",
-]

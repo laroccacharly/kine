@@ -1,6 +1,9 @@
-export type TargetCommand =
-  | { x: number; y: number }
-  | { x_px: number; y_px: number }
+export type WorldTarget = {
+  x: number
+  y: number
+}
+
+export type TargetCommand = WorldTarget | { x_px: number; y_px: number }
 
 export type JointMotionConfig = {
   max_speed_rad_s: number

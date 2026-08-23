@@ -11,23 +11,34 @@ import {
 
 import { AppShell } from './AppShell'
 import { ArmVideo } from './ArmVideo'
-import { MotionForm } from './MotionForm'
+import { ConfigForm } from './ConfigForm'
 import { SolverStatus } from './SolverStatus'
-import { TargetForm } from './TargetForm'
 import { useArmSession } from './useArmSession'
 import { useArmVideo } from './useArmVideo'
 
 export default function App() {
   const { stream } = useArmVideo()
-  const { state, solver, error, sendTarget, saveMotionConfig } = useArmSession()
+  const {
+    state,
+    solver,
+    error,
+    sendTarget,
+    saveMotionConfig,
+    isTargetPending,
+    isMotionConfigPending,
+  } = useArmSession()
 
   return (
     <AppShell
       sidebar={
-        <div className="flex flex-col gap-6 px-4">
-          <TargetForm onSubmit={sendTarget} />
-          <MotionForm motion={state?.motion ?? null} onSubmit={saveMotionConfig} />
-        </div>
+        <ConfigForm
+          target={state?.target ?? null}
+          motion={state?.motion ?? null}
+          onUpdateTarget={sendTarget}
+          onUpdateMotionConfig={saveMotionConfig}
+          isTargetPending={isTargetPending}
+          isMotionConfigPending={isMotionConfigPending}
+        />
       }
     >
       <Card className="min-h-0 flex-1 gap-0 py-0">

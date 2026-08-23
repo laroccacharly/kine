@@ -1,13 +1,18 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-import type { SolverResults } from './types'
+import type { ArmState, SolverResults } from './types'
 
 type SolverStatusProps = {
   result: SolverResults | null
+  state: ArmState | null
+  error: string | null
 }
 
-export function SolverStatus({ result }: SolverStatusProps) {
+export function SolverStatus({ result, state, error }: SolverStatusProps) {
+  if (error != null) {
+    return <p className="text-sm text-destructive">{error}</p>
+  }
   if (result == null) {
     return <p className="text-sm text-muted-foreground">No solver result yet.</p>
   }
@@ -33,9 +38,15 @@ export function SolverStatus({ result }: SolverStatusProps) {
       <div className="flex min-w-0 items-center gap-2">
         <dt className="text-muted-foreground">target</dt>
         <dd className="truncate">
-          {result.target == null
+          {state == null ? 'none' : `${state.target.x.toFixed(2)} m, ${state.target.y.toFixed(2)} m`}
+        </dd>
+      </div>
+      <div className="flex min-w-0 items-center gap-2">
+        <dt className="text-muted-foreground">motion</dt>
+        <dd className="truncate">
+          {state == null
             ? 'none'
-            : `${result.target.x.toFixed(2)} m, ${result.target.y.toFixed(2)} m`}
+            : `${state.motion.max_speed_rad_s} rad/s, ${state.motion.acceleration_rad_s2} rad/s²`}
         </dd>
       </div>
       <div className="flex min-w-0 items-center gap-2">

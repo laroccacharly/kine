@@ -22,6 +22,7 @@ dependencies = [
 [project.scripts]
 kine = "kine:main"
 serve = "kine.cli:app"
+deploy = "kine.cli:deploy"
 lint = "lint:main"
 
 [build-system]

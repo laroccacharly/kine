@@ -2,7 +2,9 @@ from math import pi
 
 import pytest
 
-from kine.two_joint import JointAngles, TipPosition, TwoJointArm, solve_forward
+from kine.arm import TwoJointArm
+from kine.solve import solve_forward
+from kine.types import JointAngles, TipPosition
 
 
 @pytest.mark.parametrize(

@@ -1,12 +1,8 @@
 import pytest
 
-from kine.two_joint import (
-    JointAngles,
-    TipPosition,
-    TwoJointArm,
-    solve_forward,
-    solve_inverse,
-)
+from kine.arm import TwoJointArm
+from kine.solve import solve_forward, solve_inverse
+from kine.types import JointAngles, TipPosition
 
 
 @pytest.mark.parametrize(

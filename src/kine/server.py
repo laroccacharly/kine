@@ -16,7 +16,12 @@ from pydantic import BaseModel, ConfigDict
 
 from kine.arm import TwoJointArm
 from kine.motion import JointMotionConfig
-from kine.render import PixelPoint, RenderConfig, render_arm, world_point_from_frame_pixel
+from kine.render import (
+    PixelPoint,
+    RenderConfig,
+    render_arm,
+    world_point_from_frame_pixel,
+)
 from kine.session import ArmSession
 from kine.solve import SolverResults
 from kine.types import TipPosition

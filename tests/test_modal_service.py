@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 
 import modal
 from playwright.sync_api import expect, sync_playwright
-
 from test_time_to_first_frame import receive_first_frame
 
 

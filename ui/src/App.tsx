@@ -44,7 +44,10 @@ export default function App() {
       <Card className="min-h-0 flex-1 gap-0 py-0">
         <CardHeader className="shrink-0 border-b py-3">
           <CardTitle>Arm feed</CardTitle>
-          <CardDescription>Live WebRTC stream from the solver</CardDescription>
+          <CardDescription>
+            Live WebRTC stream from the solver. Disable your VPN if you cannot
+            see the video feed.
+          </CardDescription>
           <CardAction>
             <Badge variant={stream == null ? 'outline' : 'secondary'}>
               {stream == null ? 'Connecting' : 'Live'}

@@ -6,7 +6,7 @@ from pathlib import Path
 class UI:
     def __init__(self) -> None:
         self.build_hash_name = ".build-hash"
-        self.source_suffixes = {".ts", ".tsx", ".css", ".html"}
+        self.source_suffixes = {".ts", ".tsx", ".css", ".html", ".svg", ".ico"}
         self.skip_dirs = {"node_modules", "dist", "dist-ssr"}
         self.dist_dir.mkdir(parents=True, exist_ok=True)
 

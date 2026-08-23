@@ -12,13 +12,14 @@ from av import VideoFrame
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from kine.arm import TwoJointArm
-from kine.motion import JointMotion, JointMotionConfig
+from kine.motion import JointMotionConfig
 from kine.render import PixelPoint, RenderConfig, render_arm, world_point_from_frame_pixel
+from kine.session import ArmSession
 from kine.solve import SolverResults
-from kine.types import JointAngles, TipPosition
+from kine.types import TipPosition
 from kine.ui import UI
 
 
@@ -32,7 +33,7 @@ def create_ui_app() -> FastAPI:
     return create_app(UI())
 
 
-def create_app(ui: UI | None = None) -> FastAPI:
+def create_app(ui: UI | None = None, session: ArmSession | None = None) -> FastAPI:
     app = FastAPI()
     app.add_middleware(
         CORSMiddleware,
@@ -41,23 +42,47 @@ def create_app(ui: UI | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    register_routes(app)
+    session = session or ArmSession(
+        TwoJointArm(l1=1.0, l2=1.0), JointMotionConfig(), RenderConfig()
+    )
+    app.state.arm_session = session
+    register_routes(app, session)
     if ui is not None and ui.assets_exist():
         app.mount("/", StaticFiles(directory=str(ui.dist_dir), html=True), name="ui")
     return app
-
-
-class TargetCommand(BaseModel):
-    x: float | None = None
-    y: float | None = None
-    x_px: float | None = None
-    y_px: float | None = None
 
 
 class BrowserIceCandidate(BaseModel):
     candidate: str
     sdpMid: str | None = None
     sdpMLineIndex: int | None = None
+
+
+class WorldTargetCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    x: float
+    y: float
+
+
+class PixelTargetCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    x_px: float
+    y_px: float
+
+
+TargetCommand = WorldTargetCommand | PixelTargetCommand
+
+
+class ArmState(BaseModel):
+    target: TipPosition
+    motion: JointMotionConfig
+
+
+class TargetUpdateResponse(BaseModel):
+    state: ArmState
+    solver: SolverResults
 
 
 def ice_candidate_from_browser(data: BrowserIceCandidate) -> RTCIceCandidate:
@@ -69,66 +94,62 @@ def ice_candidate_from_browser(data: BrowserIceCandidate) -> RTCIceCandidate:
 
 
 class ArmVideoTrack(VideoStreamTrack):
-    def __init__(
-        self,
-        arm: TwoJointArm,
-        config: RenderConfig,
-        motion_config: JointMotionConfig,
-    ) -> None:
+    def __init__(self, session: ArmSession) -> None:
         super().__init__()
-        self.arm = arm
-        self.config = config
-        self.time_s: float | None = None
-        result = arm.set_target(arm.target)
-        if result.success and result.solution is not None:
-            self.arm.angles = JointAngles(theta1=result.solution[0], theta2=result.solution[1])
-        self.motion = JointMotion.at_rest(self.arm.angles, motion_config)
-
-    def set_target(self, target: TipPosition) -> SolverResults:
-        result = self.arm.set_target(target)
-        if result.success and result.solution is not None:
-            self.motion.set_goal(JointAngles(theta1=result.solution[0], theta2=result.solution[1]))
-        return result
-
-    def set_target_from_command(self, command: TargetCommand) -> SolverResults | None:
-        target = self.tip_from_command(command)
-        if target is None:
-            return None
-        return self.set_target(target)
-
-    def tip_from_command(self, command: TargetCommand) -> TipPosition | None:
-        if command.x_px is not None and command.y_px is not None:
-            world = world_point_from_frame_pixel(
-                PixelPoint(x_px=command.x_px, y_px=command.y_px),
-                self.arm,
-                self.config,
-            )
-            return TipPosition(x=world.x_m, y=world.y_m)
-        if command.x is None or command.y is None:
-            return None
-        return TipPosition(x=command.x, y=command.y)
+        self.session = session
 
     async def recv(self) -> VideoFrame:
         pts, time_base = await self.next_timestamp()
-        now_s = float(pts * time_base)
-        dt_s = 0.0 if self.time_s is None else now_s - self.time_s
-        self.time_s = now_s
-        self.arm.angles = self.motion.step(dt_s)
         frame = VideoFrame.from_ndarray(
-            np.asarray(render_arm(self.arm, self.config)), format="rgb24"
+            np.asarray(
+                render_arm(
+                    self.session.current_arm(),
+                    self.session.target,
+                    self.session.render_config,
+                )
+            ),
+            format="rgb24",
         )
         frame.pts = pts
         frame.time_base = time_base
         return frame
 
 
-def register_routes(app: FastAPI) -> None:
-    @app.websocket("/ws")
+def arm_state(session: ArmSession) -> ArmState:
+    return ArmState(target=session.target, motion=session.motion_config)
+
+
+def target_from_command(command: TargetCommand, session: ArmSession) -> TipPosition:
+    if isinstance(command, WorldTargetCommand):
+        return TipPosition(x=command.x, y=command.y)
+    world = world_point_from_frame_pixel(
+        PixelPoint(x_px=command.x_px, y_px=command.y_px),
+        session.current_arm(),
+        session.render_config,
+    )
+    return TipPosition(x=world.x_m, y=world.y_m)
+
+
+def register_routes(app: FastAPI, session: ArmSession) -> None:
+    @app.get("/api/arm")
+    async def get_arm() -> ArmState:
+        return arm_state(session)
+
+    @app.put("/api/arm/target")
+    async def set_target(command: TargetCommand) -> TargetUpdateResponse:
+        result = session.set_target(target_from_command(command, session))
+        return TargetUpdateResponse(state=arm_state(session), solver=result)
+
+    @app.put("/api/arm/motion-config")
+    async def set_motion_config(config: JointMotionConfig) -> ArmState:
+        session.set_motion_config(config)
+        return arm_state(session)
+
+    @app.websocket("/ws/signaling")
     async def stream_arm(websocket: WebSocket) -> None:
         await websocket.accept()
         pc = create_local_peer_connection()
-        arm = TwoJointArm(l1=1.0, l2=1.0)
-        track = ArmVideoTrack(arm, RenderConfig(), JointMotionConfig())
+        track = ArmVideoTrack(session)
         pc.addTrack(track)
         try:
             await pc.setLocalDescription(await pc.createOffer())
@@ -139,18 +160,6 @@ def register_routes(app: FastAPI) -> None:
                 if kind == "answer":
                     await pc.setRemoteDescription(
                         RTCSessionDescription(sdp=message["sdp"], type="answer")
-                    )
-                    continue
-                if kind == "target":
-                    result = track.set_target_from_command(TargetCommand.model_validate(message))
-                    if result is None:
-                        continue
-                    await websocket.send_json(
-                        {
-                            "type": "solver",
-                            **result.model_dump(),
-                            "target": track.arm.target.model_dump(),
-                        }
                     )
                     continue
                 if kind != "ice":

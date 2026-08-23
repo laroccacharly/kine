@@ -85,7 +85,7 @@ def test_time_to_first_frame(record_property) -> None:
     server_ready_s = time.perf_counter() - started_at
     try:
         connect_started_at = time.perf_counter()
-        frame = asyncio.run(receive_first_frame(f"ws://127.0.0.1:{server.port}/ws"))
+        frame = asyncio.run(receive_first_frame(f"ws://127.0.0.1:{server.port}/ws/signaling"))
         time_to_first_frame_s = time.perf_counter() - connect_started_at
     finally:
         server.stop()

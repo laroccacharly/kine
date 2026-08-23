@@ -18,7 +18,7 @@ def frontend_url() -> str:
 def frontend_ws_url() -> str:
     parsed = urlparse(frontend_url())
     scheme = "wss" if parsed.scheme == "https" else "ws"
-    return parsed._replace(scheme=scheme, path="/ws", query="", fragment="").geturl()
+    return parsed._replace(scheme=scheme, path="/ws/signaling", query="", fragment="").geturl()
 
 
 def test_modal_frontend_returns_a_page() -> None:

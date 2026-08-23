@@ -18,7 +18,7 @@ import { useArmVideo } from './useArmVideo'
 
 export default function App() {
   const { stream } = useArmVideo()
-  const { state, solver, error, sendTarget, sendMotion } = useArmSession()
+  const { state, solver, error, sendTarget, saveMotionConfig } = useArmSession()
 
   return (
     <div className="flex h-svh flex-col overflow-hidden">
@@ -29,7 +29,7 @@ export default function App() {
         </div>
         <div className="flex flex-wrap items-end gap-6">
           <TargetForm onSubmit={sendTarget} />
-          <MotionForm motion={state?.motion ?? null} onSubmit={sendMotion} />
+          <MotionForm motion={state?.motion ?? null} onSubmit={saveMotionConfig} />
         </div>
       </header>
       <main className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">

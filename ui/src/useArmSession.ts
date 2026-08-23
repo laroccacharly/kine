@@ -39,9 +39,11 @@ export function useArmSession() {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify(target),
-      }),
+    }),
     onSuccess: (next) => {
-      queryClient.setQueryData(armQueryKey, next.state)
+      queryClient.setQueryData<ArmState>(armQueryKey, (current) =>
+        current == null ? next.state : { ...current, target: next.state.target },
+      )
     },
   })
 
@@ -51,27 +53,37 @@ export function useArmSession() {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify(motion),
-      }),
+    }),
     onSuccess: (next) => {
-      queryClient.setQueryData(armQueryKey, next)
+      queryClient.setQueryData<ArmState>(armQueryKey, (current) =>
+        current == null ? next : { ...current, motion: next.motion },
+      )
     },
   })
 
   function sendTarget(target: TargetCommand) {
-    motionMutation.reset()
     targetMutation.mutate(target)
   }
 
-  function sendMotion(motion: JointMotionConfig) {
-    targetMutation.reset()
+  function saveMotionConfig(motion: JointMotionConfig) {
     motionMutation.mutate(motion)
   }
 
   const state = armQuery.data ?? null
   const solver: SolverResults | null = targetMutation.data?.solver ?? null
+  const latestMutation =
+    targetMutation.submittedAt > motionMutation.submittedAt ? targetMutation : motionMutation
   const error = errorMessage(
-    targetMutation.error ?? motionMutation.error ?? (state == null ? armQuery.error : null),
+    latestMutation.error ?? (state == null ? armQuery.error : null),
   )
 
-  return { state, solver, error, sendTarget, sendMotion }
+  return {
+    state,
+    solver,
+    error,
+    sendTarget,
+    saveMotionConfig,
+    isTargetPending: targetMutation.isPending,
+    isMotionConfigPending: motionMutation.isPending,
+  }
 }

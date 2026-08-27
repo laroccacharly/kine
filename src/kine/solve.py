@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from kine.arm import TwoJointArm
 from kine.build_nlp import build_forward_nlp, build_inverse_nlp
-from kine.types import JointAngles, TipPosition
+from kine.types import JointAngles, TipPosition, wrap_angle_rad
 
 IPOPT_OPTIONS = {
     "ipopt.print_level": 0,
@@ -20,6 +20,12 @@ RETRYABLE_REASONS = {
     "Infeasible_Problem_Detected",
     "Restoration_Failure",
 }
+
+
+def wrap_joint_solution(solution: list[float] | None) -> list[float] | None:
+    if solution is None:
+        return None
+    return [wrap_angle_rad(value) for value in solution]
 
 
 class SolverResults(BaseModel):
@@ -73,7 +79,7 @@ def solve_inverse(arm: TwoJointArm, target: TipPosition) -> SolverResults:
         runtime += result.runtime
         last = SolverResults(
             success=result.success,
-            solution=result.solution,
+            solution=wrap_joint_solution(result.solution),
             reason=result.reason,
             runtime=runtime,
         )

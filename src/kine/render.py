@@ -85,6 +85,10 @@ def format_world_point(point: WorldPoint) -> str:
     return f"{point.x_m:.2f} m, {point.y_m:.2f} m"
 
 
+def format_joint_angles(arm: TwoJointArm) -> str:
+    return f"{arm.angles.theta1:.2f} rad, {arm.angles.theta2:.2f} rad"
+
+
 def circle_bbox(center: PixelPoint, radius_px: float) -> tuple[float, float, float, float]:
     return (
         center.x_px - radius_px,
@@ -118,6 +122,7 @@ def render_arm(arm: TwoJointArm, target: TipPosition, config: RenderConfig) -> I
         draw.ellipse(circle_bbox(joint_px, config.radius_px), fill=config.joint_rgb)
 
     font = ImageFont.load_default(size=config.label_font_size_px)
+    line_height_px = config.label_font_size_px + 4
     draw.text(
         (config.padding_px, config.padding_px),
         f"current {format_world_point(joints_m[-1])}",
@@ -125,7 +130,13 @@ def render_arm(arm: TwoJointArm, target: TipPosition, config: RenderConfig) -> I
         font=font,
     )
     draw.text(
-        (config.padding_px, config.padding_px + config.label_font_size_px + 4),
+        (config.padding_px, config.padding_px + line_height_px),
+        f"angles  {format_joint_angles(arm)}",
+        fill=config.label_rgb,
+        font=font,
+    )
+    draw.text(
+        (config.padding_px, config.padding_px + 2 * line_height_px),
         f"target  {format_world_point(target_m)}",
         fill=config.target_rgb,
         font=font,

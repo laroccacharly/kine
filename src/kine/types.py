@@ -3,6 +3,13 @@ from math import isclose, remainder, tau
 from pydantic import BaseModel
 
 
+def wrap_angle_rad(angle_rad: float) -> float:
+    wrapped = angle_rad % tau
+    if wrapped > tau - 1e-4:
+        return 0.0
+    return wrapped
+
+
 def equivalent_angle(left: float, right: float) -> bool:
     return isclose(remainder(left - right, tau), 0.0, abs_tol=1e-5)
 

@@ -4,10 +4,10 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 import { AppShell } from './AppShell'
 import { ArmVideo } from './ArmVideo'
@@ -31,14 +31,20 @@ export default function App() {
   return (
     <AppShell
       sidebar={
-        <ConfigForm
-          target={state?.target ?? null}
-          motion={state?.motion ?? null}
-          onUpdateTarget={sendTarget}
-          onUpdateMotionConfig={saveMotionConfig}
-          isTargetPending={isTargetPending}
-          isMotionConfigPending={isMotionConfigPending}
-        />
+        <div className="flex flex-col gap-6">
+          <ConfigForm
+            target={state?.target ?? null}
+            motion={state?.motion ?? null}
+            onUpdateTarget={sendTarget}
+            onUpdateMotionConfig={saveMotionConfig}
+            isTargetPending={isTargetPending}
+            isMotionConfigPending={isMotionConfigPending}
+          />
+          <div className="px-4">
+            <Separator className="mb-6" />
+            <SolverStatus result={solver} state={state} error={error} />
+          </div>
+        </div>
       }
     >
       <Card className="min-h-0 flex-1 gap-0 py-0">
@@ -57,9 +63,6 @@ export default function App() {
         <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
           <ArmVideo stream={stream} onTarget={sendTarget} />
         </CardContent>
-        <CardFooter className="shrink-0 justify-start">
-          <SolverStatus result={solver} state={state} error={error} />
-        </CardFooter>
       </Card>
     </AppShell>
   )

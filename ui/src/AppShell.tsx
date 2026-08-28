@@ -1,14 +1,20 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { MenuIcon, Move3dIcon, XIcon } from 'lucide-react'
+import { BookOpenIcon, MenuIcon, Move3dIcon, RadioIcon, XIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+export type AppPage = 'live' | 'motion'
+
 export function AppShell({
+  page,
+  onPageChange,
   sidebar,
   children,
 }: {
+  page: AppPage
+  onPageChange: (page: AppPage) => void
   sidebar: ReactNode
   children: ReactNode
 }) {
@@ -19,6 +25,11 @@ export function AppShell({
   function closeMobileSidebar() {
     setMobileOpen(false)
     requestAnimationFrame(() => menuButtonRef.current?.focus())
+  }
+
+  function navigate(nextPage: AppPage) {
+    onPageChange(nextPage)
+    closeMobileSidebar()
   }
 
   useEffect(() => {
@@ -81,7 +92,29 @@ export function AppShell({
             <XIcon aria-hidden="true" />
           </Button>
         </div>
-        <div className="flex-1 overflow-y-auto py-3">{sidebar}</div>
+        <nav aria-label="Main navigation" className="grid gap-1 border-b p-3">
+          <Button
+            variant={page === 'live' ? 'secondary' : 'ghost'}
+            className="justify-start"
+            aria-current={page === 'live' ? 'page' : undefined}
+            onClick={() => navigate('live')}
+          >
+            <RadioIcon />
+            Live arm
+          </Button>
+          <Button
+            variant={page === 'motion' ? 'secondary' : 'ghost'}
+            className="justify-start"
+            aria-current={page === 'motion' ? 'page' : undefined}
+            onClick={() => navigate('motion')}
+          >
+            <BookOpenIcon />
+            How motion works
+          </Button>
+        </nav>
+        {page === 'live' ? (
+          <div className="flex-1 overflow-y-auto py-3">{sidebar}</div>
+        ) : null}
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -99,7 +132,9 @@ export function AppShell({
           >
             <MenuIcon aria-hidden="true" />
           </Button>
-          <p className="min-w-0 flex-1 truncate text-sm font-medium">Live</p>
+          <p className="min-w-0 flex-1 truncate text-sm font-medium">
+            {page === 'live' ? 'Live' : 'How motion works'}
+          </p>
         </header>
         <main
           id="main-content"

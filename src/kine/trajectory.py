@@ -4,7 +4,7 @@ from math import remainder, tau
 from pydantic import BaseModel, Field
 
 from kine.arm import TwoJointArm
-from kine.motion import JointMotionConfig, arm_settled, step_arm
+from kine.motion import JointMotionConfig, advance_arm, arm_has_settled
 from kine.types import JointAngles
 
 PLAN_DT_S = 1 / 60
@@ -29,8 +29,10 @@ class Trajectory(BaseModel):
     ) -> "Trajectory":
         samples = [start]
         arm = start
-        while arm.t_s - start.t_s < max_duration_s and not arm_settled(arm, goal, config):
-            arm = step_arm(arm, goal, dt_s, config)
+        while arm.t_s - start.t_s < max_duration_s and not arm_has_settled(
+            arm, goal, config
+        ):
+            arm = advance_arm(arm, goal, dt_s, config)
             samples.append(arm)
         return cls(samples=samples)
 

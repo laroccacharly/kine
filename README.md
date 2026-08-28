@@ -2,6 +2,8 @@
 
 An interactive two-joint inverse-kinematics simulator with smooth motion and a live WebRTC video feed.
 
+[Demo app](https://laroccacharly-dev--kine-frontend.us-east.modal.direct) <!-- demo-app-url -->
+
 ![Two-joint robot arm in a non-default pose](robot-frame.png)
 
 ## Features

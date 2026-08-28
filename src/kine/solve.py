@@ -5,7 +5,7 @@ import casadi as ca
 from pydantic import BaseModel
 
 from kine.arm import TwoJointArm
-from kine.build_nlp import build_forward_nlp, build_inverse_nlp
+from kine.build_nlp import NlpProblem, build_forward_nlp, build_inverse_nlp
 from kine.types import JointAngles, TipPosition, wrap_angle_rad
 
 IPOPT_OPTIONS = {
@@ -35,9 +35,9 @@ class SolverResults(BaseModel):
     runtime: float
 
 
-def solve_with_ipopt(nlp: dict, x0: list[float]) -> SolverResults:
+def solve_with_ipopt(problem: NlpProblem, x0: list[float]) -> SolverResults:
     started = perf_counter()
-    solver = ca.nlpsol("kinematics", "ipopt", nlp, IPOPT_OPTIONS)
+    solver = ca.nlpsol("kinematics", "ipopt", problem.to_casadi(), IPOPT_OPTIONS)
     result = solver(x0=x0, lbg=[0, 0], ubg=[0, 0])
     runtime = perf_counter() - started
     stats = solver.stats()
